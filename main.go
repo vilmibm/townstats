@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -67,17 +68,64 @@ func news() []NewsEntry {
 	return []NewsEntry{}
 }
 
-func userCount() int {
+func userCount(users []User) int {
 	// TODO
 	return 0
 }
 
-func users() []User {
-	// TODO
-	return []User{}
+func systemUsers() map[string]bool {
+	systemUsers := map[string]bool{
+		"ubuntu":  true,
+		"ttadmin": true,
+		"root":    true,
+	}
+	envSystemUsers := os.Getenv("SYSTEM_USERS")
+	if envSystemUsers != "" {
+		for _, username := range strings.Split(envSystemUsers, ",") {
+			systemUsers[username] = true
+		}
+	}
+
+	return systemUsers
 }
 
-func liveUserCount() int {
+func getUsers() (users []User) {
+	// For the purposes of this program, we discover users via:
+	// - presence in /home/
+	// - absence in systemUsers list (sourced from source code and potentially augmented by an environment variable)
+	// We formally used passwd parsing. This is definitely more "correct" and I'm
+	// not opposed to going back to that; going back to parsing /home is mainly to
+	// get this new version going.
+
+	homeDir := os.Getenv("HOMES_DIR")
+	if homeDir == "" {
+		homeDir = "/home"
+	}
+
+	out, err := exec.Command("ls", homeDir).Output()
+
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	if err != nil {
+		log.Fatalf("could not run who %s", err)
+	}
+
+	systemUsers := systemUsers()
+
+	for scanner.Scan() {
+		username := scanner.Text()
+		if !systemUsers[username] {
+			user := User{
+				Username: username,
+				// TODO other fields
+			}
+			users = append(users, user)
+		}
+	}
+
+	return users
+}
+
+func liveUserCount(users []User) int {
 	// TODO
 	return 0
 }
@@ -109,6 +157,7 @@ func uptime() string {
 }
 
 func tdp() TildeData {
+	users := getUsers()
 	return TildeData{
 		Name:            "tilde.town",
 		URL:             "https://tilde.town",
@@ -116,9 +165,9 @@ func tdp() TildeData {
 		WantUsers:       true,
 		AdminEmail:      "root@tilde.town",
 		Description:     description,
-		UserCount:       userCount(),
-		Users:           users(),
-		LiveUserCount:   liveUserCount(),
+		UserCount:       len(users),
+		Users:           users,
+		LiveUserCount:   liveUserCount(users),
 		ActiveUserCount: activeUserCount(),
 		Uptime:          uptime(),
 		News:            news(),
