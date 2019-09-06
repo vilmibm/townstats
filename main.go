@@ -17,6 +17,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -36,7 +38,7 @@ type NewsEntry struct {
 type User struct {
 	Username  string `json:"username"` // Username of user
 	PageTitle string `json:"title"`    // Title of user's HTML page, if they have one
-	Mtime     int    `json:"mtime"`    // Timestamp representing the last time a user's index.html was modified
+	Mtime     int64  `json:"mtime"`    // Timestamp representing the last time a user's index.html was modified
 	// Town additions
 	DefaultPage bool   `json:"default"` // Whether or not user has updated their default index.html
 	Favicon     string `json:"favicon"` // URL to a small image representing the user
@@ -60,14 +62,18 @@ type TildeData struct {
 	News            []NewsEntry // Collection of town news entries
 }
 
+func homesDir() string {
+	hDir := os.Getenv("HOMES_DIR")
+	if hDir == "" {
+		hDir = "/home"
+	}
+
+	return hDir
+}
+
 func news() []NewsEntry {
 	// TODO
 	return []NewsEntry{}
-}
-
-func userCount(users []User) int {
-	// TODO
-	return 0
 }
 
 func pageTitleFor(username string) string {
@@ -91,9 +97,24 @@ func systemUsers() map[string]bool {
 	return systemUsers
 }
 
-func mtimeFor(username string) int {
-	// TODO
-	return 0
+func mtimeFor(username string) int64 {
+	path := path.Join(homesDir(), username, "public_html")
+	var maxMtime int64 = 0
+	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if maxMtime < info.ModTime().Unix() {
+			maxMtime = info.ModTime().Unix()
+
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error walking %q: %v\n", path, err)
+	}
+
+	return maxMtime
 }
 
 func detectDefaultPageFor(username string) bool {
@@ -114,12 +135,7 @@ func getUsers() (users []User) {
 	// not opposed to going back to that; going back to parsing /home is mainly to
 	// get this new version going.
 
-	homeDir := os.Getenv("HOMES_DIR")
-	if homeDir == "" {
-		homeDir = "/home"
-	}
-
-	out, err := exec.Command("ls", homeDir).Output()
+	out, err := exec.Command("ls", homesDir()).Output()
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	if err != nil {
