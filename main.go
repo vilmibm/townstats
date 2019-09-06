@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 )
 
 // TODO read ENV var for additional system users but hard code the ones we know about
@@ -52,7 +53,7 @@ type TildeData struct {
 	LiveUserCount   int         `json:"live_user_count"`   // Users who have changed their index.html
 	ActiveUserCount int         `json:"active_user_count"` // Users with an active login
 	GeneratedAt     string      `json:"generated_at"`      // When this was generated in '%Y-%m-%d %H:%M:%S' format
-	GeneratedAtMsec int         `json:"generated_at_msec"` // When this was generated in milliseconds since epoch
+	GeneratedAtSec  int64       `json:"generated_at_sec"`  // When this was generated in seconds since epoch
 	Uptime          string      `json:"uptime"`            // output of `uptime -p`
 	News            []NewsEntry // Collection of town news entries
 }
@@ -101,8 +102,8 @@ func tdp() TildeData {
 		ActiveUserCount: activeUserCount(),
 		Uptime:          uptime(),
 		News:            news(),
-		GeneratedAt:     "TODO",
-		GeneratedAtMsec: 0,
+		GeneratedAt:     time.Now().UTC().Format("2006-01-02 15:04:05"),
+		GeneratedAtSec:  time.Now().Unix(),
 	}
 }
 
