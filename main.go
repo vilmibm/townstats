@@ -10,6 +10,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -53,7 +55,7 @@ type TildeData struct {
 	Users       []User `json:"users"`
 	// Town Additions
 	LiveUserCount   int         `json:"live_user_count"`   // Users who have changed their index.html
-	ActiveUserCount int         `json:"active_user_count"` // Users with an active login
+	ActiveUserCount int         `json:"active_user_count"` // Users with an active session
 	GeneratedAt     string      `json:"generated_at"`      // When this was generated in '%Y-%m-%d %H:%M:%S' format
 	GeneratedAtSec  int64       `json:"generated_at_sec"`  // When this was generated in seconds since epoch
 	Uptime          string      `json:"uptime"`            // output of `uptime -p`
@@ -81,8 +83,21 @@ func liveUserCount() int {
 }
 
 func activeUserCount() int {
-	// TODO
-	return 0
+	out, err := exec.Command("who").Output()
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	if err != nil {
+		log.Fatalf("could not run who %s", err)
+	}
+
+	activeUsers := map[string]bool{}
+
+	for scanner.Scan() {
+		whoLine := scanner.Text()
+		username := strings.Split(whoLine, " ")[0]
+		activeUsers[username] = true
+	}
+
+	return len(activeUsers)
 }
 
 func uptime() string {
