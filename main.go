@@ -15,62 +15,66 @@ import (
 
 // Usage: stats > /var/www/html/tilde.json
 
-// {
-//   'name':         (string) the name of the server.
-//   'url':          (string) the URL of the server.
-//   'signup_url':   (string) the URL of a page describing the process required to request an account on the server.
-//   'want_users':   (boolean) whether the server is currently accepting new user requests.
-//   'admin_email':  (string) the email address of the primary server administrator.
-//   'description':  (string) a free-form description for the server.
-//   'users': [      (array) an array of users on the server, sorted by last activity time
-//   	{
-//   		'username': (string) the username of the user.
-//   		'title':    (string) the HTML title of the user’s index.html page.
-//   		'mtime':    (number) a timestamp representing the last time the user’s index.html was modified.
-//   		},
-//   	...
-//   	]
-//   'user_count':   (number) the number of users currently registered on the server.
-// }
-
-// We add some town-flavored info as well:
-
-// {
-//    'users': [ (array) of users on the server.
-//    {
-//    	'default': (boolean) Is the user still using their unmodified default index.html?
-//    	'favicon': (string) a url to an image representing the user
-//    	},
-//    ...
-//    ]
-//    'live_user_count': (number) count of live users (those who have changed their index.html)
-//    'active_user_count': (number) count of currently logged in users
-//    'generated_at': (string) the time this JSON was generated in '%Y-%m-%d %H:%M:%S' format.
-//    'generated_at_msec': (number) the time this JSON was generated, in milliseconds since the epoch.
-//    'uptime': (string) output of `uptime -p`
-//    'news': collection of tilde.town news entries containing 'title', 'pubdate', and 'content', the latter being raw HTML
-//  }
-
 // TODO read ENV var for additional system users but hard code the ones we know about
 
 const default_html_filename = "/etc/skel/public_html/index.html"
+const description = `an intentional digital community for creating and sharing
+works of art, peer education, and technological anachronism. we are
+non-commercial, donation supported, and committed to rejecting false
+technological progress in favor of empathy and sustainable computing.`
+
+type NewsEntry struct {
+	// TODO
+}
+
+type User struct {
+	Username  string `json:"username"` // Username of user
+	PageTitle string `json:"title"`    // Title of user's HTML page, if they have one
+	Mtime     int    `json:"mtime"`    // Timestamp representing the last time a user's index.html was modified
+	// Town additions
+	DisplayName string `json:"display_name"` // Display Name of user
+	DefaultPage bool   `json:"default"`      // Whether or not user has updated their default index.html
+	Favicon     string `json:"favicon"`      // URL to a small image representing the user
+}
 
 type TildeData struct {
-	Name       string `json:"name"`
-	URL        string `json:"url"`
-	SignupURL  string `json:"signup_url"`
-	WantUsers  bool   `json:"want_users"`
-	AdminEmail string `json:"admin_email"`
-	// TODO add to this
+	Name        string `json:"name"`        // Name of the server
+	URL         string `json:"url"`         // URL of the server's homepage
+	SignupURL   string `json:"signup_url"`  // URL for server's signup page
+	WantUsers   bool   `json:"want_users"`  // Whether or not new users are being accepted
+	AdminEmail  string `json:"admin_email"` // Email for server admin
+	Description string `json:"description"` // Description of server
+	UserCount   int    `json:"user_count"`  // Total number of users on server sorted by last activity time
+	Users       []User `json:"users"`
+	// Town Additions
+	LiveUserCount   int    `json:"live_user_count"`   // Users who have changed their index.html
+	ActiveUserCount int    `json:"active_user_count"` // Users with an active login
+	GeneratedAt     int    `json:"generated_at"`      // When this was generated in '%Y-%m-%d %H:%M:%S' format
+	GenaratedAtsec  int    `json:"generated_at_msec"` // When this was generated in seconds since epoch
+	Uptime          string `json:"uptime"`            // output of `uptime -p`
+	News            []NewsEntry
+}
+
+func userCount() int {
+	// TODO
+	return 0
+}
+
+func users() []User {
+	// TODO
+	return []User{}
 }
 
 func tdp() TildeData {
 	return TildeData{
-		Name:       "tilde.town",
-		URL:        "https://tilde.town",
-		SignupURL:  "https://cgi.tilde.town/users/signup",
-		WantUsers:  true,
-		AdminEmail: "root@tilde.town",
+		Name:        "tilde.town",
+		URL:         "https://tilde.town",
+		SignupURL:   "https://cgi.tilde.town/users/signup",
+		WantUsers:   true,
+		AdminEmail:  "root@tilde.town",
+		Description: description,
+		UserCount:   userCount(),
+		Users:       users(),
 	}
 }
 
