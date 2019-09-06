@@ -1,3 +1,11 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
+
 // townstats returns information about tilde.town in the tilde data protcol format
 // It was originally a Python script written by Michael F. Lamb <https://datagrok.org>
 // License: GPLv3+
@@ -42,3 +50,36 @@
 //    'uptime': (string) output of `uptime -p`
 //    'news': collection of tilde.town news entries containing 'title', 'pubdate', and 'content', the latter being raw HTML
 //  }
+
+// TODO read ENV var for additional system users but hard code the ones we know about
+
+const default_html_filename = "/etc/skel/public_html/index.html"
+
+type TildeData struct {
+	Name       string `json:"name"`
+	URL        string `json:"url"`
+	SignupURL  string `json:"signup_url"`
+	WantUsers  bool   `json:"want_users"`
+	AdminEmail string `json:"admin_email"`
+	// TODO add to this
+}
+
+func tdp() TildeData {
+	return TildeData{
+		Name:       "tilde.town",
+		URL:        "https://tilde.town",
+		SignupURL:  "https://cgi.tilde.town/users/signup",
+		WantUsers:  true,
+		AdminEmail: "root@tilde.town",
+	}
+}
+
+func main() {
+
+	data, err := json.Marshal(tdp())
+	if err != nil {
+		log.Fatalf("Failed to marshal JSON: %s", err)
+	}
+	fmt.Printf("%s\n", data)
+
+}
