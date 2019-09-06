@@ -21,8 +21,6 @@ import (
 	"time"
 )
 
-// TODO read ENV var for additional system users but hard code the ones we know about
-
 const default_html_filename = "/etc/skel/public_html/index.html"
 const description = `an intentional digital community for creating and sharing
 works of art, peer education, and technological anachronism. we are
@@ -40,9 +38,8 @@ type User struct {
 	PageTitle string `json:"title"`    // Title of user's HTML page, if they have one
 	Mtime     int    `json:"mtime"`    // Timestamp representing the last time a user's index.html was modified
 	// Town additions
-	DisplayName string `json:"display_name"` // Display Name of user
-	DefaultPage bool   `json:"default"`      // Whether or not user has updated their default index.html
-	Favicon     string `json:"favicon"`      // URL to a small image representing the user
+	DefaultPage bool   `json:"default"` // Whether or not user has updated their default index.html
+	Favicon     string `json:"favicon"` // URL to a small image representing the user
 }
 
 type TildeData struct {
@@ -73,6 +70,11 @@ func userCount(users []User) int {
 	return 0
 }
 
+func pageTitleFor(username string) string {
+	// TODO
+	return "TODO"
+}
+
 func systemUsers() map[string]bool {
 	systemUsers := map[string]bool{
 		"ubuntu":  true,
@@ -87,6 +89,21 @@ func systemUsers() map[string]bool {
 	}
 
 	return systemUsers
+}
+
+func mtimeFor(username string) int {
+	// TODO
+	return 0
+}
+
+func detectDefaultPageFor(username string) bool {
+	// TODO
+	return true
+}
+
+func detectFaviconFor(username string) string {
+	// TODO
+	return "TODO.jpg"
 }
 
 func getUsers() (users []User) {
@@ -115,8 +132,11 @@ func getUsers() (users []User) {
 		username := scanner.Text()
 		if !systemUsers[username] {
 			user := User{
-				Username: username,
-				// TODO other fields
+				Username:    username,
+				PageTitle:   pageTitleFor(username),
+				Mtime:       mtimeFor(username),
+				DefaultPage: detectDefaultPageFor(username),
+				Favicon:     detectFaviconFor(username),
 			}
 			users = append(users, user)
 		}
@@ -132,10 +152,11 @@ func liveUserCount(users []User) int {
 
 func activeUserCount() int {
 	out, err := exec.Command("who").Output()
-	scanner := bufio.NewScanner(bytes.NewReader(out))
 	if err != nil {
 		log.Fatalf("could not run who %s", err)
 	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(out))
 
 	activeUsers := map[string]bool{}
 
