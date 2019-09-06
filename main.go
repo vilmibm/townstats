@@ -14,16 +14,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
 
-const default_html_filename = "/etc/skel/public_html/index.html"
+const defaultHTMLFilename = "/etc/skel/public_html/index.html"
 const description = `an intentional digital community for creating and sharing
 works of art, peer education, and technological anachronism. we are
 non-commercial, donation supported, and committed to rejecting false
@@ -77,8 +79,16 @@ func news() []NewsEntry {
 }
 
 func pageTitleFor(username string) string {
-	// TODO
-	return "TODO"
+	pageTitleRe := regexp.MustCompile(`<title[^>]*>(.*)</title>`)
+	indexPath := path.Join(homesDir(), username, "public_html", "index.html")
+	content, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to read %q: %v\n", indexPath, err)
+		return ""
+	}
+	title := pageTitleRe.FindString(string(content))
+
+	return title
 }
 
 func systemUsers() map[string]bool {
