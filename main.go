@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -84,8 +86,11 @@ func activeUserCount() int {
 }
 
 func uptime() string {
-	// TODO
-	return "TODO"
+	out, err := exec.Command("uptime").Output()
+	if err != nil {
+		log.Fatalf("could not run uptime %s", err)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func tdp() TildeData {
