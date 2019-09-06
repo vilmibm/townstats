@@ -1,11 +1,3 @@
-package main
-
-import (
-	"encoding/json"
-	"fmt"
-	"log"
-)
-
 // townstats returns information about tilde.town in the tilde data protcol format
 // It was originally a Python script written by Michael F. Lamb <https://datagrok.org>
 // License: GPLv3+
@@ -14,6 +6,14 @@ import (
 // It is a JSON structure of the form:
 
 // Usage: stats > /var/www/html/tilde.json
+
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+)
 
 // TODO read ENV var for additional system users but hard code the ones we know about
 
@@ -24,7 +24,9 @@ non-commercial, donation supported, and committed to rejecting false
 technological progress in favor of empathy and sustainable computing.`
 
 type NewsEntry struct {
-	// TODO
+	Title   string `json:"title"`   // Title of entry
+	Pubdate string `json:"pubdate"` // Human readable date
+	Content string `json:"content"` // HTML of entry
 }
 
 type User struct {
@@ -47,12 +49,17 @@ type TildeData struct {
 	UserCount   int    `json:"user_count"`  // Total number of users on server sorted by last activity time
 	Users       []User `json:"users"`
 	// Town Additions
-	LiveUserCount   int    `json:"live_user_count"`   // Users who have changed their index.html
-	ActiveUserCount int    `json:"active_user_count"` // Users with an active login
-	GeneratedAt     int    `json:"generated_at"`      // When this was generated in '%Y-%m-%d %H:%M:%S' format
-	GenaratedAtsec  int    `json:"generated_at_msec"` // When this was generated in seconds since epoch
-	Uptime          string `json:"uptime"`            // output of `uptime -p`
-	News            []NewsEntry
+	LiveUserCount   int         `json:"live_user_count"`   // Users who have changed their index.html
+	ActiveUserCount int         `json:"active_user_count"` // Users with an active login
+	GeneratedAt     string      `json:"generated_at"`      // When this was generated in '%Y-%m-%d %H:%M:%S' format
+	GeneratedAtMsec int         `json:"generated_at_msec"` // When this was generated in milliseconds since epoch
+	Uptime          string      `json:"uptime"`            // output of `uptime -p`
+	News            []NewsEntry // Collection of town news entries
+}
+
+func news() []NewsEntry {
+	// TODO
+	return []NewsEntry{}
 }
 
 func userCount() int {
@@ -65,25 +72,44 @@ func users() []User {
 	return []User{}
 }
 
+func liveUserCount() int {
+	// TODO
+	return 0
+}
+
+func activeUserCount() int {
+	// TODO
+	return 0
+}
+
+func uptime() string {
+	// TODO
+	return "TODO"
+}
+
 func tdp() TildeData {
 	return TildeData{
-		Name:        "tilde.town",
-		URL:         "https://tilde.town",
-		SignupURL:   "https://cgi.tilde.town/users/signup",
-		WantUsers:   true,
-		AdminEmail:  "root@tilde.town",
-		Description: description,
-		UserCount:   userCount(),
-		Users:       users(),
+		Name:            "tilde.town",
+		URL:             "https://tilde.town",
+		SignupURL:       "https://cgi.tilde.town/users/signup",
+		WantUsers:       true,
+		AdminEmail:      "root@tilde.town",
+		Description:     description,
+		UserCount:       userCount(),
+		Users:           users(),
+		LiveUserCount:   liveUserCount(),
+		ActiveUserCount: activeUserCount(),
+		Uptime:          uptime(),
+		News:            news(),
+		GeneratedAt:     "TODO",
+		GeneratedAtMsec: 0,
 	}
 }
 
 func main() {
-
 	data, err := json.Marshal(tdp())
 	if err != nil {
 		log.Fatalf("Failed to marshal JSON: %s", err)
 	}
 	fmt.Printf("%s\n", data)
-
 }
