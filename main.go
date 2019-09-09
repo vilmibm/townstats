@@ -42,8 +42,7 @@ type User struct {
 	PageTitle string `json:"title"`    // Title of user's HTML page, if they have one
 	Mtime     int64  `json:"mtime"`    // Timestamp representing the last time a user's index.html was modified
 	// Town additions
-	DefaultPage bool   `json:"default"` // Whether or not user has updated their default index.html
-	Favicon     string `json:"favicon"` // URL to a small image representing the user
+	DefaultPage bool `json:"default"` // Whether or not user has updated their default index.html
 }
 
 type TildeData struct {
@@ -132,11 +131,6 @@ func detectDefaultPageFor(username string) bool {
 	return true
 }
 
-func detectFaviconFor(username string) string {
-	// TODO
-	return "TODO.jpg"
-}
-
 func getUsers() (users []User) {
 	// For the purposes of this program, we discover users via:
 	// - presence in /home/
@@ -162,7 +156,6 @@ func getUsers() (users []User) {
 				PageTitle:   pageTitleFor(username),
 				Mtime:       mtimeFor(username),
 				DefaultPage: detectDefaultPageFor(username),
-				Favicon:     detectFaviconFor(username),
 			}
 			users = append(users, user)
 		}
