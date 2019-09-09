@@ -195,8 +195,13 @@ func getUsers() (users []User) {
 }
 
 func liveUserCount(users []User) int {
-	// TODO
-	return 0
+	count := 0
+	for _, u := range users {
+		if !u.DefaultPage {
+			count++
+		}
+	}
+	return count
 }
 
 func activeUserCount() int {
