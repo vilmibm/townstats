@@ -177,6 +177,8 @@ func detectDefaultPageFor(username string, defaultHTML []byte) bool {
 	if err != nil {
 		return false
 	}
+	defer indexFile.Close()
+
 	indexHTML, err := ioutil.ReadAll(indexFile)
 	if err != nil {
 		return false
@@ -194,6 +196,7 @@ func getDefaultHTML() []byte {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer defaultIndexFile.Close()
 
 	defaultIndexHTML, err := ioutil.ReadAll(defaultIndexFile)
 	if err != nil {
