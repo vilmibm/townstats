@@ -153,7 +153,7 @@ func pageTitleFor(username string) string {
 	}
 	content, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to read %q: %v\n", indexPath, err)
+		log.Printf("failed to read %q: %v\n", indexPath, err)
 		return ""
 	}
 	titleMatch := pageTitleRe.FindStringSubmatch(string(content))
@@ -192,7 +192,7 @@ func mtimeFor(username string) int64 {
 		return nil
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error walking %q: %v\n", path, err)
+		log.Printf("error walking %q: %v\n", path, err)
 	}
 
 	return maxMtime
