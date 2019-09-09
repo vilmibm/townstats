@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -121,9 +122,35 @@ func news() []NewsEntry {
 	return entries
 }
 
+func indexPathFor(username string) (string, error) {
+	potentialPaths := []string{"index.html", "index.htm"}
+	indexPath := ""
+	errs := []error{}
+	for _, p := range potentialPaths {
+		fullPath := path.Join(homesDir(), username, "public_html", p)
+		_, staterr := os.Stat(fullPath)
+		if staterr != nil {
+			errs = append(errs, staterr)
+		} else {
+			indexPath = fullPath
+			break
+		}
+	}
+
+	if indexPath == "" {
+		return "", errors.New(fmt.Sprintf("Failed to locate index file for %v; tried %v; encountered errors: %v", username, potentialPaths, errs))
+	}
+
+	return indexPath, nil
+}
+
 func pageTitleFor(username string) string {
 	pageTitleRe := regexp.MustCompile(`<title[^>]*>(.*)</title>`)
-	indexPath := path.Join(homesDir(), username, "public_html", "index.html")
+	indexPath, err := indexPathFor(username)
+	if err != nil {
+		log.Print(err)
+		return ""
+	}
 	content, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to read %q: %v\n", indexPath, err)
@@ -172,7 +199,11 @@ func mtimeFor(username string) int64 {
 }
 
 func detectDefaultPageFor(username string, defaultHTML []byte) bool {
-	indexPath := path.Join(homesDir(), username, "public_html", "index.html")
+	indexPath, err := indexPathFor(username)
+	if err != nil {
+		log.Print(err)
+		return false
+	}
 	indexFile, err := os.Open(indexPath)
 	if err != nil {
 		return false
