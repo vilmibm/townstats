@@ -85,9 +85,11 @@ func pageTitleFor(username string) string {
 		fmt.Fprintf(os.Stderr, "failed to read %q: %v\n", indexPath, err)
 		return ""
 	}
-	title := pageTitleRe.FindString(string(content))
-
-	return title
+	titleMatch := pageTitleRe.FindStringSubmatch(string(content))
+	if len(titleMatch) < 2 {
+		return ""
+	}
+	return titleMatch[1]
 }
 
 func systemUsers() map[string]bool {
