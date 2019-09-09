@@ -73,8 +73,52 @@ func homesDir() string {
 }
 
 func news() []NewsEntry {
-	// TODO
-	return []NewsEntry{}
+	inMeta := true
+	inContent := false
+	current := NewsEntry{}
+	entries := []NewsEntry{}
+	blankLineRe := regexp.MustCompile(`^ *\n$`)
+
+	newsPath := os.Getenv("NEWS_PATH")
+	if newsPath == "" {
+		newsPath = "/town/news.posts"
+	}
+
+	newsFile, err := os.Open(newsPath)
+	if err != nil {
+		log.Fatalf("Unable to read news file: %v", err)
+	}
+	defer newsFile.Close()
+
+	scanner := bufio.NewScanner(newsFile)
+
+	for scanner.Scan() {
+		newsLine := scanner.Text()
+		if strings.HasPrefix(newsLine, "#") || newsLine == "" || blankLineRe.FindStringIndex(newsLine) != nil {
+			continue
+		} else if strings.HasPrefix(newsLine, "--") {
+			entries = append(entries, current)
+			current = NewsEntry{}
+			inMeta = true
+			inContent = false
+		} else if inMeta {
+			kv := strings.SplitN(newsLine, ":", 2)
+			if kv[0] == "pubdate" {
+				current.Pubdate = strings.TrimSpace(kv[1])
+			} else if kv[0] == "title" {
+				current.Title = strings.TrimSpace(kv[1])
+			} else {
+				log.Printf("Ignoring unknown metadata in news entry: %v\n", newsLine)
+			}
+			if current.Pubdate != "" && current.Title != "" {
+				inMeta = false
+				inContent = true
+			}
+		} else if inContent {
+			current.Content += fmt.Sprintf("\n%v", strings.TrimSpace(newsLine))
+		}
+	}
+	return entries
 }
 
 func pageTitleFor(username string) string {
@@ -169,11 +213,11 @@ func getUsers() (users []User) {
 	defaultIndexHTML := getDefaultHTML()
 
 	out, err := exec.Command("ls", homesDir()).Output()
-
-	scanner := bufio.NewScanner(bytes.NewReader(out))
 	if err != nil {
 		log.Fatalf("could not run who %s", err)
 	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(out))
 
 	systemUsers := systemUsers()
 
