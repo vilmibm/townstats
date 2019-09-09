@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-const defaultHTMLFilename = "/etc/skel/public_html/index.html"
+const defaultIndexPath = "/etc/skel/public_html/index.html"
 const description = `an intentional digital community for creating and sharing
 works of art, peer education, and technological anachronism. we are
 non-commercial, donation supported, and committed to rejecting false
@@ -117,7 +117,6 @@ func mtimeFor(username string) int64 {
 		}
 		if maxMtime < info.ModTime().Unix() {
 			maxMtime = info.ModTime().Unix()
-
 		}
 		return nil
 	})
@@ -128,9 +127,36 @@ func mtimeFor(username string) int64 {
 	return maxMtime
 }
 
-func detectDefaultPageFor(username string) bool {
-	// TODO
-	return true
+func detectDefaultPageFor(username string, defaultHTML []byte) bool {
+	indexPath := path.Join(homesDir(), username, "public_html", "index.html")
+	indexFile, err := os.Open(indexPath)
+	if err != nil {
+		return false
+	}
+	indexHTML, err := ioutil.ReadAll(indexFile)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(indexHTML, defaultHTML)
+}
+
+func getDefaultHTML() []byte {
+	indexPath := os.Getenv("DEFAULT_INDEX_PATH")
+	if indexPath == "" {
+		indexPath = defaultIndexPath
+	}
+
+	defaultIndexFile, err := os.Open(indexPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defaultIndexHTML, err := ioutil.ReadAll(defaultIndexFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return defaultIndexHTML
 }
 
 func getUsers() (users []User) {
@@ -140,6 +166,7 @@ func getUsers() (users []User) {
 	// We formally used passwd parsing. This is definitely more "correct" and I'm
 	// not opposed to going back to that; going back to parsing /home is mainly to
 	// get this new version going.
+	defaultIndexHTML := getDefaultHTML()
 
 	out, err := exec.Command("ls", homesDir()).Output()
 
@@ -152,15 +179,16 @@ func getUsers() (users []User) {
 
 	for scanner.Scan() {
 		username := scanner.Text()
-		if !systemUsers[username] {
-			user := User{
-				Username:    username,
-				PageTitle:   pageTitleFor(username),
-				Mtime:       mtimeFor(username),
-				DefaultPage: detectDefaultPageFor(username),
-			}
-			users = append(users, user)
+		if systemUsers[username] {
+			continue
 		}
+		user := User{
+			Username:    username,
+			PageTitle:   pageTitleFor(username),
+			Mtime:       mtimeFor(username),
+			DefaultPage: detectDefaultPageFor(username, defaultIndexHTML),
+		}
+		users = append(users, user)
 	}
 
 	return users
