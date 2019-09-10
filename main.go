@@ -46,14 +46,14 @@ type user struct {
 }
 
 type tildeData struct {
-	Name        string `json:"name"`        // Name of the server
-	URL         string `json:"url"`         // URL of the server's homepage
-	SignupURL   string `json:"signup_url"`  // URL for server's signup page
-	WantUsers   bool   `json:"want_users"`  // Whether or not new users are being accepted
-	AdminEmail  string `json:"admin_email"` // Email for server admin
-	Description string `json:"description"` // Description of server
-	UserCount   int    `json:"user_count"`  // Total number of users on server sorted by last activity time
-	Users       []user `json:"users"`
+	Name        string  `json:"name"`        // Name of the server
+	URL         string  `json:"url"`         // URL of the server's homepage
+	SignupURL   string  `json:"signup_url"`  // URL for server's signup page
+	WantUsers   bool    `json:"want_users"`  // Whether or not new users are being accepted
+	AdminEmail  string  `json:"admin_email"` // Email for server admin
+	Description string  `json:"description"` // Description of server
+	UserCount   int     `json:"user_count"`  // Total number of users on server sorted by last activity time
+	Users       []*user `json:"users"`
 	// Town Additions
 	LiveUserCount   int         `json:"live_user_count"`   // Users who have changed their index.html
 	ActiveUserCount int         `json:"active_user_count"` // Users with an active session
@@ -237,7 +237,7 @@ func getDefaultHTML() ([]byte, error) {
 
 type usersByMtime []*user
 
-func getUsers() (users []user, err error) {
+func getUsers() (users []*user, err error) {
 	// TODO sort by mtime
 	// For the purposes of this program, we discover users via:
 	// - presence in /home/
@@ -270,13 +270,13 @@ func getUsers() (users []user, err error) {
 			Mtime:       mtimeFor(username),
 			DefaultPage: detectDefaultPageFor(username, defaultIndexHTML),
 		}
-		users = append(users, user)
+		users = append(users, &user)
 	}
 
 	return users, nil
 }
 
-func liveUserCount(users []user) int {
+func liveUserCount(users []*user) int {
 	count := 0
 	for _, u := range users {
 		if !u.DefaultPage {
