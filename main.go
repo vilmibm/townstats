@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -235,7 +236,11 @@ func getDefaultHTML() ([]byte, error) {
 	return defaultIndexHTML, nil
 }
 
-type usersByMtime []*user
+type byMtime []*user
+
+func (x byMtime) Len() int           { return len(x) }
+func (x byMtime) Less(i, j int) bool { return x[i].Mtime > x[j].Mtime } // because we want DESC
+func (x byMtime) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
 
 func getUsers() (users []*user, err error) {
 	// TODO sort by mtime
@@ -331,6 +336,8 @@ func tdp() (tildeData, error) {
 	if err != nil {
 		return tildeData{}, fmt.Errorf("could not determine uptime: %s", err)
 	}
+
+	sort.Sort(byMtime(users))
 
 	return tildeData{
 		Name:            "tilde.town",
