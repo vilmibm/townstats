@@ -64,14 +64,15 @@ type tildeData struct {
 	News            []newsEntry // Collection of town news entries
 }
 
-func homesDir() string {
-	hDir := os.Getenv("HOMES_DIR")
-	if hDir == "" {
-		hDir = "/home"
+func getEnvDefault(key, def string) string {
+	result := os.Getenv(key)
+	if result == "" {
+		result = def
 	}
-
-	return hDir
+	return result
 }
+
+func homesDir() string { return getEnvDefault("HOMES_DIR", "/home") }
 
 func getNews() (entries []newsEntry, err error) {
 	inMeta := true
@@ -79,10 +80,7 @@ func getNews() (entries []newsEntry, err error) {
 	current := newsEntry{}
 	blankLineRe := regexp.MustCompile(`^ *\n$`)
 
-	newsPath := os.Getenv("NEWS_PATH")
-	if newsPath == "" {
-		newsPath = "/town/news.posts"
-	}
+	newsPath := getEnvDefault("NEWS_PATH", "/town/news.posts")
 
 	newsFile, err := os.Open(newsPath)
 	if err != nil {
@@ -243,7 +241,6 @@ func (x byMtime) Less(i, j int) bool { return x[i].Mtime > x[j].Mtime } // becau
 func (x byMtime) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
 
 func getUsers() (users []*user, err error) {
-	// TODO sort by mtime
 	// For the purposes of this program, we discover users via:
 	// - presence in /home/
 	// - absence in systemUsers list (sourced from source code and potentially augmented by an environment variable)
