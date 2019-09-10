@@ -73,11 +73,10 @@ func homesDir() string {
 	return hDir
 }
 
-func news() []NewsEntry {
+func getNews() (entries []NewsEntry, err error) {
 	inMeta := true
 	inContent := false
 	current := NewsEntry{}
-	entries := []NewsEntry{}
 	blankLineRe := regexp.MustCompile(`^ *\n$`)
 
 	newsPath := os.Getenv("NEWS_PATH")
@@ -87,7 +86,7 @@ func news() []NewsEntry {
 
 	newsFile, err := os.Open(newsPath)
 	if err != nil {
-		log.Fatalf("Unable to read news file: %v", err)
+		return entries, errors.New(fmt.Sprintf("unable to read news file: %s", err))
 	}
 	defer newsFile.Close()
 
@@ -119,7 +118,7 @@ func news() []NewsEntry {
 			current.Content += fmt.Sprintf("\n%v", strings.TrimSpace(newsLine))
 		}
 	}
-	return entries
+	return entries, nil
 }
 
 func indexPathFor(username string) (string, error) {
@@ -217,7 +216,7 @@ func detectDefaultPageFor(username string, defaultHTML []byte) bool {
 	return bytes.Equal(indexHTML, defaultHTML)
 }
 
-func getDefaultHTML() []byte {
+func getDefaultHTML() ([]byte, error) {
 	indexPath := os.Getenv("DEFAULT_INDEX_PATH")
 	if indexPath == "" {
 		indexPath = defaultIndexPath
@@ -225,30 +224,34 @@ func getDefaultHTML() []byte {
 
 	defaultIndexFile, err := os.Open(indexPath)
 	if err != nil {
-		log.Fatal(err)
+		return []byte{}, errors.New(fmt.Sprintf("could not open default index: %s", err))
 	}
 	defer defaultIndexFile.Close()
 
 	defaultIndexHTML, err := ioutil.ReadAll(defaultIndexFile)
 	if err != nil {
-		log.Fatal(err)
+		return []byte{}, errors.New(fmt.Sprintf("could not read default index: %s", err))
 	}
 
-	return defaultIndexHTML
+	return defaultIndexHTML, nil
 }
 
-func getUsers() (users []User) {
+func getUsers() (users []User, err error) {
+	// TODO sort by mtime
 	// For the purposes of this program, we discover users via:
 	// - presence in /home/
 	// - absence in systemUsers list (sourced from source code and potentially augmented by an environment variable)
 	// We formally used passwd parsing. This is definitely more "correct" and I'm
 	// not opposed to going back to that; going back to parsing /home is mainly to
 	// get this new version going.
-	defaultIndexHTML := getDefaultHTML()
+	defaultIndexHTML, err := getDefaultHTML()
+	if err != nil {
+		return users, err
+	}
 
 	out, err := exec.Command("ls", homesDir()).Output()
 	if err != nil {
-		log.Fatalf("could not run who %s", err)
+		return users, errors.New(fmt.Sprintf("could not run ls: %s", err))
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
@@ -269,7 +272,7 @@ func getUsers() (users []User) {
 		users = append(users, user)
 	}
 
-	return users
+	return users, nil
 }
 
 func liveUserCount(users []User) int {
@@ -282,10 +285,10 @@ func liveUserCount(users []User) int {
 	return count
 }
 
-func activeUserCount() int {
+func activeUserCount() (int, error) {
 	out, err := exec.Command("who").Output()
 	if err != nil {
-		log.Fatalf("could not run who %s", err)
+		return 0, errors.New(fmt.Sprintf("could not run who: %s", err))
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
@@ -298,19 +301,36 @@ func activeUserCount() int {
 		activeUsers[username] = true
 	}
 
-	return len(activeUsers)
+	return len(activeUsers), nil
 }
 
-func uptime() string {
+func getUptime() (string, error) {
 	out, err := exec.Command("uptime").Output()
 	if err != nil {
-		log.Fatalf("could not run uptime %s", err)
+		return "", errors.New(fmt.Sprintf("could not run uptime: %s", err))
 	}
-	return strings.TrimSpace(string(out))
+	return strings.TrimSpace(string(out)), nil
 }
 
-func tdp() TildeData {
-	users := getUsers()
+func tdp() (TildeData, error) {
+	users, err := getUsers()
+	if err != nil {
+		return TildeData{}, errors.New(fmt.Sprintf("could not get user list: %s", err))
+	}
+	activeUsers, err := activeUserCount()
+	if err != nil {
+		return TildeData{}, errors.New(fmt.Sprintf("could not count non-default users: %s", err))
+	}
+	news, err := getNews()
+	if err != nil {
+		return TildeData{}, errors.New(fmt.Sprintf("could not get news: %s", err))
+	}
+
+	uptime, err := getUptime()
+	if err != nil {
+		return TildeData{}, errors.New(fmt.Sprintf("could not determine uptime: %s", err))
+	}
+
 	return TildeData{
 		Name:            "tilde.town",
 		URL:             "https://tilde.town",
@@ -321,16 +341,20 @@ func tdp() TildeData {
 		UserCount:       len(users),
 		Users:           users,
 		LiveUserCount:   liveUserCount(users),
-		ActiveUserCount: activeUserCount(),
-		Uptime:          uptime(),
-		News:            news(),
+		ActiveUserCount: activeUsers,
+		Uptime:          uptime,
+		News:            news,
 		GeneratedAt:     time.Now().UTC().Format("2006-01-02 15:04:05"),
 		GeneratedAtSec:  time.Now().Unix(),
-	}
+	}, nil
 }
 
 func main() {
-	data, err := json.Marshal(tdp())
+	systemData, err := tdp()
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := json.Marshal(systemData)
 	if err != nil {
 		log.Fatalf("Failed to marshal JSON: %s", err)
 	}
