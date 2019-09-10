@@ -114,6 +114,8 @@ func getNews() (entries []newsEntry, err error) {
 			}
 		} else if inContent {
 			current.Content += fmt.Sprintf("\n%v", strings.TrimSpace(newsLine))
+		} else {
+			panic("news post parsing should never reach this point")
 		}
 	}
 	return entries, nil
