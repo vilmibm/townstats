@@ -13,7 +13,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -32,13 +31,13 @@ works of art, peer education, and technological anachronism. we are
 non-commercial, donation supported, and committed to rejecting false
 technological progress in favor of empathy and sustainable computing.`
 
-type NewsEntry struct {
+type newsEntry struct {
 	Title   string `json:"title"`   // Title of entry
 	Pubdate string `json:"pubdate"` // Human readable date
 	Content string `json:"content"` // HTML of entry
 }
 
-type User struct {
+type user struct {
 	Username  string `json:"username"` // Username of user
 	PageTitle string `json:"title"`    // Title of user's HTML page, if they have one
 	Mtime     int64  `json:"mtime"`    // Timestamp representing the last time a user's index.html was modified
@@ -46,7 +45,7 @@ type User struct {
 	DefaultPage bool `json:"default"` // Whether or not user has updated their default index.html
 }
 
-type TildeData struct {
+type tildeData struct {
 	Name        string `json:"name"`        // Name of the server
 	URL         string `json:"url"`         // URL of the server's homepage
 	SignupURL   string `json:"signup_url"`  // URL for server's signup page
@@ -54,14 +53,14 @@ type TildeData struct {
 	AdminEmail  string `json:"admin_email"` // Email for server admin
 	Description string `json:"description"` // Description of server
 	UserCount   int    `json:"user_count"`  // Total number of users on server sorted by last activity time
-	Users       []User `json:"users"`
+	Users       []user `json:"users"`
 	// Town Additions
 	LiveUserCount   int         `json:"live_user_count"`   // Users who have changed their index.html
 	ActiveUserCount int         `json:"active_user_count"` // Users with an active session
 	GeneratedAt     string      `json:"generated_at"`      // When this was generated in '%Y-%m-%d %H:%M:%S' format
 	GeneratedAtSec  int64       `json:"generated_at_sec"`  // When this was generated in seconds since epoch
 	Uptime          string      `json:"uptime"`            // output of `uptime -p`
-	News            []NewsEntry // Collection of town news entries
+	News            []newsEntry // Collection of town news entries
 }
 
 func homesDir() string {
@@ -73,10 +72,10 @@ func homesDir() string {
 	return hDir
 }
 
-func getNews() (entries []NewsEntry, err error) {
+func getNews() (entries []newsEntry, err error) {
 	inMeta := true
 	inContent := false
-	current := NewsEntry{}
+	current := newsEntry{}
 	blankLineRe := regexp.MustCompile(`^ *\n$`)
 
 	newsPath := os.Getenv("NEWS_PATH")
@@ -86,7 +85,7 @@ func getNews() (entries []NewsEntry, err error) {
 
 	newsFile, err := os.Open(newsPath)
 	if err != nil {
-		return entries, errors.New(fmt.Sprintf("unable to read news file: %s", err))
+		return entries, fmt.Errorf("unable to read news file: %s", err)
 	}
 	defer newsFile.Close()
 
@@ -98,7 +97,7 @@ func getNews() (entries []NewsEntry, err error) {
 			continue
 		} else if strings.HasPrefix(newsLine, "--") {
 			entries = append(entries, current)
-			current = NewsEntry{}
+			current = newsEntry{}
 			inMeta = true
 			inContent = false
 		} else if inMeta {
@@ -137,7 +136,7 @@ func indexPathFor(username string) (string, error) {
 	}
 
 	if indexPath == "" {
-		return "", errors.New(fmt.Sprintf("Failed to locate index file for %v; tried %v; encountered errors: %v", username, potentialPaths, errs))
+		return "", fmt.Errorf("Failed to locate index file for %v; tried %v; encountered errors: %v", username, potentialPaths, errs)
 	}
 
 	return indexPath, nil
@@ -224,19 +223,21 @@ func getDefaultHTML() ([]byte, error) {
 
 	defaultIndexFile, err := os.Open(indexPath)
 	if err != nil {
-		return []byte{}, errors.New(fmt.Sprintf("could not open default index: %s", err))
+		return []byte{}, fmt.Errorf("could not open default index: %s", err)
 	}
 	defer defaultIndexFile.Close()
 
 	defaultIndexHTML, err := ioutil.ReadAll(defaultIndexFile)
 	if err != nil {
-		return []byte{}, errors.New(fmt.Sprintf("could not read default index: %s", err))
+		return []byte{}, fmt.Errorf("could not read default index: %s", err)
 	}
 
 	return defaultIndexHTML, nil
 }
 
-func getUsers() (users []User, err error) {
+type usersByMtime []*user
+
+func getUsers() (users []user, err error) {
 	// TODO sort by mtime
 	// For the purposes of this program, we discover users via:
 	// - presence in /home/
@@ -251,7 +252,7 @@ func getUsers() (users []User, err error) {
 
 	out, err := exec.Command("ls", homesDir()).Output()
 	if err != nil {
-		return users, errors.New(fmt.Sprintf("could not run ls: %s", err))
+		return users, fmt.Errorf("could not run ls: %s", err)
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
@@ -263,7 +264,7 @@ func getUsers() (users []User, err error) {
 		if systemUsers[username] {
 			continue
 		}
-		user := User{
+		user := user{
 			Username:    username,
 			PageTitle:   pageTitleFor(username),
 			Mtime:       mtimeFor(username),
@@ -275,7 +276,7 @@ func getUsers() (users []User, err error) {
 	return users, nil
 }
 
-func liveUserCount(users []User) int {
+func liveUserCount(users []user) int {
 	count := 0
 	for _, u := range users {
 		if !u.DefaultPage {
@@ -288,7 +289,7 @@ func liveUserCount(users []User) int {
 func activeUserCount() (int, error) {
 	out, err := exec.Command("who").Output()
 	if err != nil {
-		return 0, errors.New(fmt.Sprintf("could not run who: %s", err))
+		return 0, fmt.Errorf("could not run who: %s", err)
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
@@ -307,31 +308,31 @@ func activeUserCount() (int, error) {
 func getUptime() (string, error) {
 	out, err := exec.Command("uptime").Output()
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("could not run uptime: %s", err))
+		return "", fmt.Errorf("could not run uptime: %s", err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
 
-func tdp() (TildeData, error) {
+func tdp() (tildeData, error) {
 	users, err := getUsers()
 	if err != nil {
-		return TildeData{}, errors.New(fmt.Sprintf("could not get user list: %s", err))
+		return tildeData{}, fmt.Errorf("could not get user list: %s", err)
 	}
 	activeUsers, err := activeUserCount()
 	if err != nil {
-		return TildeData{}, errors.New(fmt.Sprintf("could not count non-default users: %s", err))
+		return tildeData{}, fmt.Errorf("could not count non-default users: %s", err)
 	}
 	news, err := getNews()
 	if err != nil {
-		return TildeData{}, errors.New(fmt.Sprintf("could not get news: %s", err))
+		return tildeData{}, fmt.Errorf("could not get news: %s", err)
 	}
 
 	uptime, err := getUptime()
 	if err != nil {
-		return TildeData{}, errors.New(fmt.Sprintf("could not determine uptime: %s", err))
+		return tildeData{}, fmt.Errorf("could not determine uptime: %s", err)
 	}
 
-	return TildeData{
+	return tildeData{
 		Name:            "tilde.town",
 		URL:             "https://tilde.town",
 		SignupURL:       "https://cgi.tilde.town/users/signup",
