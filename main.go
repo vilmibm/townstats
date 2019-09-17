@@ -61,7 +61,7 @@ type tildeData struct {
 	GeneratedAt     string      `json:"generated_at"`      // When this was generated in '%Y-%m-%d %H:%M:%S' format
 	GeneratedAtSec  int64       `json:"generated_at_sec"`  // When this was generated in seconds since epoch
 	Uptime          string      `json:"uptime"`            // output of `uptime -p`
-	News            []newsEntry // Collection of town news entries
+	News            []newsEntry `json:"news"`              // Collection of town news entries
 }
 
 func getEnvDefault(key, def string) string {
